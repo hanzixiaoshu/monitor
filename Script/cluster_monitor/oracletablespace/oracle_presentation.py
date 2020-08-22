@@ -15,7 +15,7 @@ import random
 import re
 import configparser
 import cx_Oracle
-from datetime import timedelta, date
+from datetime import date, datetime
 
 def OracleTableSpace(tab, sec_ip, value_port, keys):
     #try:
@@ -137,6 +137,6 @@ def DingSend():
 
 
 if __name__ == '__main__':
-    today = (date.today()).strftime("%Y%m%d")
+    today = (datetime.now()).strftime("%Y-%m-%d-%H%M%S")
     RunAll()
 
