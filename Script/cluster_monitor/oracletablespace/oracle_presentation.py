@@ -121,12 +121,12 @@ def DingSend():
        "msgtype": "markdown",
         "markdown": {
             "title": "Oracle表空间使用状态",
-            "text": "#### Oracle表空间使用状态 @18310223187 @15201279640 \n> 服务器ip：100.200.3.32、100.200.2.22，Oracle表空间使用情况，请查看。\n> ![screenshot](https://oracle-monitor.oss-cn-tianjin.aliyuncs.com/monitor/" + today + ".PNG)\n> ###### 今日天气情况 [天气](http://www.weather.com.cn/weather/101010100.shtml) \n"
+            "text": "#### Oracle表空间使用状态 @18000000000 @15000000000 \n> 服务器ip：100.200.3.32、100.200.2.22，Oracle表空间使用情况，请查看。\n> ![screenshot](https://oracle-monitor.oss-cn-tianjin.aliyuncs.com/monitor/" + today + ".PNG)\n> ###### 今日天气情况 [天气](http://www.weather.com.cn/weather/101010100.shtml) \n"
         },
         "at": {
           "atMobiles": [
-              "18310223187",
-              "15201279640"
+              "18000000000",
+              "15000000000"
           ],
         }
     }
