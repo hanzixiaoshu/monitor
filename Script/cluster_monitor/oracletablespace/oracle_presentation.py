@@ -61,7 +61,7 @@ def OracleTableSpace(tab, sec_ip, value_port, keys):
     # python3
     draw.multiline_text((space, space), tab_info, fill=(255, 255, 255), font=font)
 
-    im_new.save('12345.PNG', "PNG")
+    im_new.save('/app/pic/12345.PNG', "PNG")
     del draw
     """
     #return "ok"
