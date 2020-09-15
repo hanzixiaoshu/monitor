@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-# -*- coding:utf-8 -*-
-#Author:xuanzhong
+
 
 import requests
 import time
@@ -13,6 +12,7 @@ import configparser
 import math
 import socket
 import threading
+import datetime
 
 #当前连接数
 def Mysql_Run_Connection_Info(User, Pass, value_port, sec_ip):
@@ -111,6 +111,30 @@ def Mysql_SyncLock(User, Pass, value_port, sec_ip):
        return os.popen("mysql -u" + User + " -p" + Pass + " -P" + value_port + " -h" + sec_ip + " -e 'show full processlist' 2>/dev/null | grep 'Waiting for commit lock' | wc -l").read()
    return Mysql_SyncLock_Out(User, Pass, value_port, sec_ip).replace("\n","").lstrip()
 
+#mysql qps
+def Mysql_QPS(User, Pass, value_port, sec_ip):
+    Start_Time = datetime.datetime.now()
+    First_Query = os.popen("mysql -u" + User + " -p" + Pass + " -P" + value_port + " -h" + sec_ip + " -e 'show global status like \"Question%\"' 2>/dev/null | sed -n 2p | awk '{print $2}'").read().replace("\n","").lstrip()
+    Second_Query = os.popen("mysql -u" + User + " -p" + Pass + " -P" + value_port + " -h" + sec_ip + " -e 'show global status like \"Question%\"' 2>/dev/null | sed -n 2p | awk '{print $2}'").read().replace("\n","").lstrip()
+    time.sleep(1)
+    End_Time = datetime.datetime.now()
+    difftime = (End_Time - Start_Time).seconds
+    return (int(Second_Query) - int(First_Query))/int(difftime)
+#mysql tps
+def Mysql_TPS(User, Pass, value_port, sec_ip):
+    Start_Time = datetime.datetime.now()
+    First_Commit = os.popen("mysql -u" + User + " -p" + Pass + " -P" + value_port + " -h" + sec_ip + " -e 'show global status like \"Com_commit\"' 2>/dev/null | sed -n 2p | awk '{print $2}'").read().replace("\n","").lstrip()
+    Second_Commit = os.popen("mysql -u" + User + " -p" + Pass + " -P" + value_port + " -h" + sec_ip + " -e 'show global status like \"Com_commit\"' 2>/dev/null | sed -n 2p | awk '{print $2}'").read().replace("\n","").lstrip()
+    First_Rollback = os.popen("mysql -u" + User + " -p" + Pass + " -P" + value_port + " -h" + sec_ip + " -e 'show global status like \"Com_rollback\"' 2>/dev/null | sed -n 2p | awk '{print $2}'").read().replace("\n","").lstrip()
+    Second_Rollback = os.popen("mysql -u" + User + " -p" + Pass + " -P" + value_port + " -h" + sec_ip + " -e 'show global status like \"Com_rollback\"' 2>/dev/null | sed -n 2p | awk '{print $2}'").read().replace("\n","").lstrip()
+    time.sleep(1)
+    End_Time = datetime.datetime.now()
+    difftime = (End_Time - Start_Time).seconds
+    Com_commit = int(Second_Commit) - int(First_Commit)
+    Com_rollback = int(Second_Rollback) - int(First_Rollback)
+    return (int(Com_commit) + int(Com_rollback))/int(difftime)
+
+
 
 #上传数据
 def Mysql_Push_Data(sec_ip, value_port, data_value,metric_name):
@@ -130,41 +154,58 @@ def Mysql_Push_Data(sec_ip, value_port, data_value,metric_name):
         "tags": "Mysql-cluster",
     }
     info_list.append(dict_info)
-    requests.post("http://172.200.2.145:1988/v1/push", data=json.dumps(info_list ))
+    requests.post("http://192.168.2.145:1988/v1/push", data=json.dumps(info_list ))
 
 #循环执行列表
-def RunAll():
+def RunAll(sec_ip):
     iniconfig = configparser.ConfigParser()
     iniconfig.read('/data/cluster_monitor/mysql_monitor/mysql_list.ini', encoding='utf-8')
-    #读取所有sections项
-    sections_ip = iniconfig.sections()
-    #print(sections_ip)
+#    #读取所有sections项
+#    sections_ip = iniconfig.sections()
     #获取所有key、value
-    for sec_ip in sections_ip:
-        print("--------------------------")
-        print(sec_ip)
-        for keys in iniconfig.options(sec_ip):
-            value_port = iniconfig.get(sec_ip, keys)
-            print(value_port)
-            #data_value = Mysql_Run_Connection_Info(User, Pass, value_port, sec_ip)
-            #print(data_value)
-            Mysql_Push_Data(sec_ip, value_port, Connect_Port(sec_ip, int(value_port)),"Mysql_Alive")
-            Mysql_Push_Data(sec_ip, value_port, Mysql_SyncLock(User, Pass, value_port, sec_ip), "Mysql_SyncLock")
-            Mysql_Push_Data(sec_ip, value_port, Mysql_Run_Connection_Info(User, Pass, value_port, sec_ip),"Mysql_Run_Connection")
-            Mysql_Push_Data(sec_ip, value_port, Mysql_Total_Connection_Info(User, Pass, value_port, sec_ip),"Mysql_Total_Connection")
-            Mysql_Push_Data(sec_ip, value_port, Mysql_Innodb_Buffer_Pool_Size_Info(User, Pass, value_port, sec_ip),"Mysql_Innodb_Buffer_Pool_Size")
-            Mysql_Push_Data(sec_ip, value_port, Mysql_Innodb_Buffer_Pool_Size_Proposal(User, Pass, value_port, sec_ip),"Mysql_Innodb_Buffer_Pool_Size_Proposal")
-            Mysql_Push_Data(sec_ip, value_port, Mysql_Sync_Status(User, Pass, value_port, sec_ip),"Mysql_Sync_Status")
-            Mysql_Push_Data(sec_ip, value_port, Mysql_Seconds_Behind(User, Pass, value_port, sec_ip), "Mysql_Seconds_Behind")
-            Mysql_Push_Data(sec_ip, value_port, Mysql_TRX_Num(User, Pass, value_port, sec_ip),"Mysql_TRX_Num")
-            Mysql_Push_Data(sec_ip, value_port, Mysql_Locks_Info(User, Pass, value_port, sec_ip), "Mysql_Locks")
-            Mysql_Push_Data(sec_ip, value_port, Mysql_Locks_Waits_Info(User, Pass, value_port, sec_ip), "Mysql_Locks_Waits")
-
-
-
-
+    #for sec_ip in sections_ip:
+    #    print("--------------------------")
+    #    print(sec_ip)
+    for keys in iniconfig.options(sec_ip):
+        value_port = iniconfig.get(sec_ip, keys)
+        print(value_port)
+        #data_value = Mysql_Run_Connection_Info(User, Pass, value_port, sec_ip)
+        #print(data_value)
+        Mysql_Push_Data(sec_ip, value_port, Connect_Port(sec_ip, int(value_port)),"Mysql_Alive")
+        Mysql_Push_Data(sec_ip, value_port, Mysql_SyncLock(User, Pass, value_port, sec_ip), "Mysql_SyncLock")
+        Mysql_Push_Data(sec_ip, value_port, Mysql_Run_Connection_Info(User, Pass, value_port, sec_ip),"Mysql_Run_Connection")
+        Mysql_Push_Data(sec_ip, value_port, Mysql_Total_Connection_Info(User, Pass, value_port, sec_ip),"Mysql_Total_Connection")
+        Mysql_Push_Data(sec_ip, value_port, Mysql_Innodb_Buffer_Pool_Size_Info(User, Pass, value_port, sec_ip),"Mysql_Innodb_Buffer_Pool_Size")
+        Mysql_Push_Data(sec_ip, value_port, Mysql_Innodb_Buffer_Pool_Size_Proposal(User, Pass, value_port, sec_ip),"Mysql_Innodb_Buffer_Pool_Size_Proposal")
+        Mysql_Push_Data(sec_ip, value_port, Mysql_Sync_Status(User, Pass, value_port, sec_ip),"Mysql_Sync_Status")
+        Mysql_Push_Data(sec_ip, value_port, Mysql_Seconds_Behind(User, Pass, value_port, sec_ip), "Mysql_Seconds_Behind")
+        Mysql_Push_Data(sec_ip, value_port, Mysql_TRX_Num(User, Pass, value_port, sec_ip),"Mysql_TRX_Num")
+        Mysql_Push_Data(sec_ip, value_port, Mysql_Locks_Info(User, Pass, value_port, sec_ip), "Mysql_Locks")
+        Mysql_Push_Data(sec_ip, value_port, Mysql_Locks_Waits_Info(User, Pass, value_port, sec_ip), "Mysql_Locks_Waits")
+        Mysql_Push_Data(sec_ip, value_port, Mysql_QPS(User, Pass, value_port, sec_ip), "Mysql_QPS")
+        Mysql_Push_Data(sec_ip, value_port, Mysql_TPS(User, Pass, value_port, sec_ip), "Mysql_TPS")
 
 if __name__ == '__main__':
-    User = "root"
+    User = "user"
     Pass = "pass"
-    RunAll()
+    #RunAll("192.168.1.17")
+    thread1 = threading.Thread(target=RunAll, args=("192.168.1.17",))
+    thread2 = threading.Thread(target=RunAll, args=("192.168.1.20",))
+    thread3 = threading.Thread(target=RunAll, args=("192.168.1.21",))
+    thread4 = threading.Thread(target=RunAll, args=("192.168.1.19",))
+    thread5 = threading.Thread(target=RunAll, args=("192.168.2.18",))
+    thread6 = threading.Thread(target=RunAll, args=("192.168.2.19",))
+    thread7 = threading.Thread(target=RunAll, args=("192.168.2.29",))
+    thread8 = threading.Thread(target=RunAll, args=("192.168.2.31",))
+    thread9 = threading.Thread(target=RunAll, args=("192.168.2.35",))
+    thread10 = threading.Thread(target=RunAll, args=("192.168.2.36",))
+    thread1.start()
+    thread2.start()
+    thread3.start()
+    thread4.start()
+    thread5.start()
+    thread6.start()
+    thread7.start()
+    thread8.start()
+    thread9.start()
+    thread10.start()
